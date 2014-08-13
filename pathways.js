@@ -2,17 +2,20 @@ console.log("pathways loaded :-) ")
 
 // loading the data
 
+gene = "Smad3";
 pathways = function(){};
-data = new Object();
+molecules = new Object();
+interactions = new Object();
 
 pathways.readData=function(){
     y = $.get("NCI-Nature_Curated.xml",
     function(x){
         pathways.xml = x;
-        console.log('data loaded')
+        console.log('Data loaded')
         $("<div>Pathway data Loaded</div>").appendTo($(document.body))
         pathways.parseFile();
-		pathways.createTable();
+		pathways.createMolecules();
+		pathways.createInteractions();
 		//pathways.createIDProperties();
 		//pathways.printTable();
         }
@@ -22,7 +25,7 @@ pathways.readData=function(){
 // Parse XML FIle
 
 pathways.parseFile=function(){
-    console.log("parsing ...");
+    console.log("Parsing ...");
     pathways.json=$.xml2json(pathways.xml);
     console.log("... xml parsed");
     $("<div>Data Parsed</div>").appendTo($(document.body))
@@ -30,24 +33,51 @@ pathways.parseFile=function(){
 
 // Create Tables as JSON Object
 
-pathways.createTable=function(){
-	console.log("creating nameToID...")
-	data = {nameToID: {}, idProperties: {}};
-	temp = pathways.json.Model.MoleculeList.Molecule;
-	for(var i = 0; i<temp.length; i+=1) {
-		if (!temp[i].ComplexComponentList && temp[i].Name[1]){
-			data.nameToID[temp[i].Name[1].value]=temp[i].id;
-			data.idProperties[temp[i].id]=temp[i].molecule_type
-			console.log(temp[i].Name[1].value);
+pathways.createMolecules=function(){
+	console.log("Creating Molecules ...");
+	molecules = {nameToID: {}, idProperties: {}};
+	temp1 = pathways.json.Model.MoleculeList.Molecule;
+	for (var i = 0; i<temp1.length; i+=1) {
+		if (!temp1[i].ComplexComponentList && temp1[i].Name[1]){
+			molecules.nameToID[temp1[i].Name[1].value]=temp1[i].id;
+			molecules.idProperties[temp1[i].id]=temp1[i].molecule_type;
+			//console.log(temp[i].Name[1].value);
 		}
-		else if ((!temp[i].ComplexComponentList && !temp[i].Name[1]) || temp[i].ComplexComponentList){
-			data.nameToID[temp[i].Name.value]=temp[i].id;
-			data.idProperties[temp[i].id]=temp[i].molecule_type
-			console.log(temp[i].Name.value);
+		else if ((!temp1[i].ComplexComponentList && !temp1[i].Name[1]) || temp1[i].ComplexComponentList){
+			molecules.nameToID[temp1[i].Name.value]=temp1[i].id;
+			molecules.idProperties[temp1[i].id]=temp1[i].molecule_type;
+			//console.log(temp[i].Name.value);
 		}
-		console.log(i);
+		//console.log(i);
 	}
-	console.log("data created");
+	console.log("... created");
+}
+
+pathways.createInteractions=function(){
+	console.log("Creating Interactions ...");
+	interactions = {level1: {}};
+	temp2 = pathways.json.Model.InteractionList.Interaction;
+	k = 0;
+	for (var i = 0; i<temp2.length; i+=1) {
+		if (temp2[i].InteractionComponentList) {
+			if(temp2[i].InteractionComponentList.InteractionComponent.molecule_idref === molecules.nameToID[gene]) {
+				interactions.level1[k]=temp2[i].id;
+				//console.log("k: " + k);
+				k+=1;
+			}				
+			else if (temp2[i].InteractionComponentList.InteractionComponent) {
+				for (var j = 0; j<temp2[i].InteractionComponentList.InteractionComponent.length; j+=1) {
+					if (temp2[i].InteractionComponentList.InteractionComponent[j].molecule_idref === molecules.nameToID[gene]) {
+						interactions.level1[k]=temp2[i].id;
+						//console.log("k: " + k);
+						k+=1;
+					}
+				}
+			}		
+			//console.log("i: " + i);
+		}
+	}
+	console.log("... created");
 }
 
 // Stringify Object
