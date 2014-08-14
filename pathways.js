@@ -1,4 +1,4 @@
-console.log("pathways.js loaded")
+cconsole.log("pathways.js loaded")
 
 // Loading the data
 pathways = function(){};
@@ -23,7 +23,7 @@ pathways.readData=function(gene){
 function molecDict() {
 	var that = this;
 	that.nameToID = {};
-	that.idProperties = {};
+	that.idMoleculeType = {};
 	that.idToName = {};
 	that.interactionToMolecule = {};
 	that.moleculeToInteraction = {};
@@ -47,7 +47,8 @@ function molecDict() {
 		that.idToName[id] = name;
 	}
 	
-	that.addProperty = function (id, prop) {
+	that.addMoleculeType = function (id, moleculeType) {		
+		that.idMoleculeType[id]=[moleculeType];
 	}
 	
 	that.findByName = function(str) {
@@ -91,11 +92,11 @@ pathways.createMolecules=function(molecules){
 	for (var molecule_ctr = 0; molecule_ctr<molecule_length; molecule_ctr+=1) {
 		if (!temp_molecule[molecule_ctr].ComplexComponentList && temp_molecule[molecule_ctr].Name[1]){
 			molecules.addID(temp_molecule[molecule_ctr].Name[1].value , temp_molecule[molecule_ctr].id);
-			//molecules.idProperties[temp_molecule[molecule_ctr].id]=temp_molecule[molecule_ctr].molecule_type;
+			molecules.addMoleculeType(temp_molecule[molecule_ctr].id,temp_molecule[molecule_ctr].molecule_type);
 		}
 		else if ((!temp_molecule[molecule_ctr].ComplexComponentList && !temp_molecule[molecule_ctr].Name[1]) || temp_molecule[molecule_ctr].ComplexComponentList){
 			molecules.addID(temp_molecule[molecule_ctr].Name.value , temp_molecule[molecule_ctr].id);
-			//molecules.idProperties[temp_molecule[molecule_ctr].id]=temp_molecule[molecule_ctr].molecule_type;
+			molecules.addMoleculeType(temp_molecule[molecule_ctr].id,temp_molecule[molecule_ctr].molecule_type);
 		}
 		//console.log(molecule_ctr);
 	}
