@@ -10,56 +10,71 @@ pathways.readData=function(){
         console.log('Data loaded')
         $("<div>Pathway data Loaded</div>").appendTo($(document.body))
         pathways.parseFile();
-		pathways.createMolecules();
-		pathways.createInteractions();
-		pathways.linkInteractions();
+		molecules = new molecDict();
+		pathways.createMolecules(molecules);
+		pathways.createInteractions(molecules);
+		pathways.printResults(molecules, gene);
 		//pathways.printTable();
         }
     )
 }
 
 /////////////////Create All Objects/////////////
-// Create Level
-function objectLevel() {
-	this.level1 = [];	
-	this.setLevel = function(x){
-		this.level1.push(x);
-	}
-}
 
-// Create Interact
-function objectInteract() {
-	var interactionID = "ooga";
-	this.molecule = [];
+// Create molecDict with nameToID, idToName, interactionToMolecule, moleculeToInteraction
+function molecDict() {
+	var that = this;
+	that.nameToID = {};
+	that.idProperties = {};
+	that.idToName = {};
+	that.interactionToMolecule = {};
+	that.moleculeToInteraction = {};
+	that.dictionary = "``";
 	
-	this.getInteractionID = function() {
-		return interactionID;
-	}	
-	this.setInteractionID = function(x) {
-		this.interactionID = x;
-	}
-	this.setMolecule = function(x) {
-		this.molecule.push(x);
-	}
-}
+	that.size = function(obj) {
+    var size = 0, key;
+    for (key in obj) {
+        if (obj.hasOwnProperty(key)) size++;
+    }
+    return size;
+	};
 
-// Create Molecule
-function objectMolecule() {
-	var moleculeID = "booga";
-	var moleculeName = "cooga";
+	that.addID = function(name, id) {
+		if(that.nameToID.hasOwnProperty(name)) {
+				that.nameToID[name].push(id);
+			} else {
+				that.nameToID[name] = [id];
+			}
+		that.dictionary += name + "``";
+		that.idToName[id] = name;
+	}
 	
-	this.getMoleculeID = function() {
-		return moleculeID;
+	that.addProperty = function (id, prop) {
 	}
-	this.getMoleculeName = function() {
-		return moleculeName;
-	}	
-	this.setMoleculeID = function(x) {
-		this.moleculeID = x;
+	
+	that.findByName = function(str) {
+		var ret = {};
+		
+		var search = new RegExp('``[^`]*?' + str + '[^`]*?``', 'ig');
+		var sol = that.dictionary.match(search);
+		for(var i = 0; i < sol.length; i += 1) {
+			sol[i] = sol[i].replace(/``/g, '');
+			ret[sol[i]] = that.nameToID[sol[i]];
+		}
+		return ret;
 	}
-	this.setMoleculeName = function(x) {
-		this.moleculeName = x;
-	}	
+	
+	that.addInteraction = function (interID, molecArr) {
+		that.interactionToMolecule[interID] = molecArr;
+		for( var i = 0; i < molecArr.length; i += 1 ) {
+			var molecID = molecArr[i];
+			if(that.moleculeToInteraction.hasOwnProperty(molecID)) {
+				that.moleculeToInteraction[molecID].push(interID);
+			} else {
+				that.moleculeToInteraction[molecID] = [interID];
+			}
+		}
+	}
 }
 
 /////////////////Create All Functions/////////////
@@ -72,82 +87,95 @@ pathways.parseFile=function(){
 }
 
 // Create Molecules with nameToID & idProperties
-pathways.createMolecules=function(){
-	molecules = new Object();
+pathways.createMolecules=function(molecules){
 	console.log("Creating Molecules ...");
-	molecules = {nameToID: {}, idProperties: {}};
 	temp_molecule = pathways.json.Model.MoleculeList.Molecule;
 	molecule_length = temp_molecule.length;
 	for (var molecule_ctr = 0; molecule_ctr<molecule_length; molecule_ctr+=1) {
 		if (!temp_molecule[molecule_ctr].ComplexComponentList && temp_molecule[molecule_ctr].Name[1]){
-			molecules.nameToID[temp_molecule[molecule_ctr].Name[1].value]=temp_molecule[molecule_ctr].id;
-			molecules.idProperties[temp_molecule[molecule_ctr].id]=temp_molecule[molecule_ctr].molecule_type;
-			//console.log(temp_molecule[molecule_ctr].Name[1].value);
+			molecules.addID(temp_molecule[molecule_ctr].Name[1].value , temp_molecule[molecule_ctr].id);
+			//molecules.idProperties[temp_molecule[molecule_ctr].id]=temp_molecule[molecule_ctr].molecule_type;
 		}
 		else if ((!temp_molecule[molecule_ctr].ComplexComponentList && !temp_molecule[molecule_ctr].Name[1]) || temp_molecule[molecule_ctr].ComplexComponentList){
-			molecules.nameToID[temp_molecule[molecule_ctr].Name.value]=temp_molecule[molecule_ctr].id;
-			molecules.idProperties[temp_molecule[molecule_ctr].id]=temp_molecule[molecule_ctr].molecule_type;
-			//console.log(temp_molecule[molecule_ctr].Name.value);
+			molecules.addID(temp_molecule[molecule_ctr].Name.value , temp_molecule[molecule_ctr].id);
+			//molecules.idProperties[temp_molecule[molecule_ctr].id]=temp_molecule[molecule_ctr].molecule_type;
 		}
 		//console.log(molecule_ctr);
 	}
 	console.log("... created");
 }
 
-pathways.createInteractions=function(){
+pathways.createInteractions=function(molecules){
 	console.log("Creating Interactions ...");
 	temp_interaction = pathways.json.Model.InteractionList.Interaction;
 	level1_ctr = 0;
 	interaction_length=temp_interaction.length;
-	interactions = new objectLevel();
 	for (var interation_ctr = 0; interation_ctr<interaction_length; interation_ctr+=1) {
 		if (temp_interaction[interation_ctr].InteractionComponentList) {
-			if(temp_interaction[interation_ctr].InteractionComponentList.InteractionComponent.molecule_idref === molecules.nameToID[gene]) {
-				interactions.setLevel(level1_ctr);
-				interactions.level1[level1_ctr] = new objectInteract();
-				interactions.level1[level1_ctr].setInteractionID(temp_interaction[interation_ctr].id);
-				interactions.level1[level1_ctr].molecule[0] = new objectMolecule();
-				interactions.level1[level1_ctr].molecule[0].setMoleculeID(temp_interaction[interation_ctr].InteractionComponentList.InteractionComponent.molecule_idref);
-				//console.log("level1_ctr: " + level1_ctr);
-				level1_ctr+=1;
-			}				
-			else if (temp_interaction[interation_ctr].InteractionComponentList.InteractionComponent) {
-				var interactionComponent_length = temp_interaction[interation_ctr].InteractionComponentList.InteractionComponent.length;
+			if (temp_interaction[interation_ctr].InteractionComponentList.InteractionComponent[1]) {
+				temp_interactionComponent = temp_interaction[interation_ctr].InteractionComponentList.InteractionComponent;	
+				var interactionComponent_length = temp_interactionComponent.length;
+				var components = [];
 				for (interactionComponent_ctr = 0; interactionComponent_ctr<interactionComponent_length; interactionComponent_ctr+=1) {
-					if (temp_interaction[interation_ctr].InteractionComponentList.InteractionComponent[interactionComponent_ctr].molecule_idref === molecules.nameToID[gene]) {
-						interactions.setLevel(level1_ctr);
-						interactions.level1[level1_ctr] = new objectInteract();
-						interactions.level1[level1_ctr].setInteractionID(temp_interaction[interation_ctr].id);
-						for (interactionComponent_ctr = 0; interactionComponent_ctr<temp_interaction[interation_ctr].InteractionComponentList.InteractionComponent.length; interactionComponent_ctr+=1) {
-							interactions.level1[level1_ctr].setMolecule(interactionComponent_ctr);
-							interactions.level1[level1_ctr].molecule[interactionComponent_ctr] = new objectMolecule();
-							interactions.level1[level1_ctr].molecule[interactionComponent_ctr].setMoleculeID(temp_interaction[interation_ctr].InteractionComponentList.InteractionComponent[interactionComponent_ctr].molecule_idref);
-						}
-						//console.log("level1_ctr: " + level1_ctr);
-						level1_ctr+=1;
-					}
-				}
+					components.push(temp_interactionComponent[interactionComponent_ctr].molecule_idref);
+					level1_ctr+=1;
+				} 
+			//console.log(components);
+			molecules.addInteraction(temp_interaction[interation_ctr].id, components);
 			}		
+			else if (temp_interaction[interation_ctr].InteractionComponentList.InteractionComponent.molecule_idref === molecules.nameToID[gene]) {		
+				molecules.addInteraction(temp_interaction[interation_ctr].id, [temp_interactionComponent.molecule_idref]);
+				level1_ctr+=1;
+			}
 			//console.log("interation_ctr: " + interation_ctr);
 		}
 	}
 	console.log("... created");
 }
 
-pathways.linkInteractions=function(){
-	console.log("Linking Interaction ...");
-	for (level1_ctr = 0; level1_ctr<interactions.level1.length; level1_ctr+=1) {
-		for (molecule_ctr = 0; molecule_ctr<interactions.level1[level1_ctr].molecule.length; molecule_ctr+=1) {
-			$.each(molecules.nameToID, function(key, val) {
-				//console.log("key: " + key + " val: " + val);
-				if (val === interactions.level1[level1_ctr].molecule[molecule_ctr].moleculeID){
-				console.log("Match " + val + " = " + interactions.level1[level1_ctr].molecule[molecule_ctr].moleculeID + " " + key);
-				interactions.level1[level1_ctr].molecule[molecule_ctr].setMoleculeName(key);
-				}
-			});
+pathways.printResults=function(molecules, gene){
+	console.log("Printing results ...");
+	tempMoleculeID = molecules.nameToID[gene];
+	//console.log(tempMoleculeID);
+	tempInteractionID = molecules.moleculeToInteraction[tempMoleculeID];
+	uniqueInteractionID = [];
+	$.each(tempInteractionID, function(i, el){
+		if($.inArray(el, uniqueInteractionID) === -1) {
+		uniqueInteractionID.push(el);
+		}
+	});
+	//console.log(uniqueInteractionID);
+	tempInteractionMoleculeID = [];
+	for (i=0; i<tempInteractionID.length; i+=1) {
+		tempInteractionMoleculeID.push(molecules.interactionToMolecule[tempInteractionID[i]]);
+	}
+	uniqueInteractionMoleculeID = [];
+	$.each(tempInteractionMoleculeID, function(i, el){
+		if($.inArray(el, uniqueInteractionMoleculeID) === -1) {
+		uniqueInteractionMoleculeID.push(el);
+		}
+	});
+	//console.log(uniqueInteractionMoleculeID);
+	tempInteractionMoleculeName = [];
+	for (i=0; i<uniqueInteractionMoleculeID.length; i+=1) {
+		for (j=0; j<uniqueInteractionMoleculeID[i].length; j+=1) {
+			tempInteractionMoleculeName.push(molecules.idToName[uniqueInteractionMoleculeID[i][j]]);
 		}
 	}
-	console.log("... linked");
+	uniqueInteractionMoleculeName = [];
+	$.each(tempInteractionMoleculeName, function(i, el){
+		if (el !== gene) {
+			if($.inArray(el, uniqueInteractionMoleculeName) === -1) {
+			uniqueInteractionMoleculeName.push(el);
+			}
+		}
+	});
+	//console.log(uniqueInteractionMoleculeName);
+	document.write(gene + " interacts with: </br>");
+	for (i=0; i<uniqueInteractionMoleculeName.length; i+=1) {
+		document.write(uniqueInteractionMoleculeName[i] + "</br>");
+	}
+	console.log("... printed");
 }
 
 // Stringify Object
