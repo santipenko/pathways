@@ -1,14 +1,12 @@
-//console.log("pathways.js loaded")
+console.log("pathways.js loaded")
 
 // Loading the data
-gene = "Smad3";
 pathways = function(){};
-pathways.readData=function(){
+pathways.readData=function(gene){
     y = $.get("NCI-Nature_Curated.xml",
     function(x){
         pathways.xml = x;
         console.log('Data loaded')
-        $("<div>Pathway data Loaded</div>").appendTo($(document.body))
         pathways.parseFile();
 		molecules = new molecDict();
 		pathways.createMolecules(molecules);
@@ -83,7 +81,6 @@ pathways.parseFile=function(){
     console.log("Parsing ...");
     pathways.json=$.xml2json(pathways.xml);
     console.log("... xml parsed");
-    $("<div>Data Parsed</div>").appendTo($(document.body))
 }
 
 // Create Molecules with nameToID & idProperties
@@ -120,14 +117,12 @@ pathways.createInteractions=function(molecules){
 					components.push(temp_interactionComponent[interactionComponent_ctr].molecule_idref);
 					level1_ctr+=1;
 				} 
-			//console.log(components);
 			molecules.addInteraction(temp_interaction[interation_ctr].id, components);
 			}		
-			else if (temp_interaction[interation_ctr].InteractionComponentList.InteractionComponent.molecule_idref === molecules.nameToID[gene]) {		
+			else if (temp_interaction[interation_ctr].InteractionComponentList.InteractionComponent[1]) {		
 				molecules.addInteraction(temp_interaction[interation_ctr].id, [temp_interactionComponent.molecule_idref]);
 				level1_ctr+=1;
 			}
-			//console.log("interation_ctr: " + interation_ctr);
 		}
 	}
 	console.log("... created");
@@ -171,18 +166,12 @@ pathways.printResults=function(molecules, gene){
 		}
 	});
 	//console.log(uniqueInteractionMoleculeName);
-	document.write(gene + " interacts with: </br>");
+	document.getElementById("myDiv").innerHTML += gene + " interacts with: </br>";
 	for (i=0; i<uniqueInteractionMoleculeName.length; i+=1) {
-		document.write(uniqueInteractionMoleculeName[i] + "</br>");
+		document.getElementById("myDiv").innerHTML += uniqueInteractionMoleculeName[i] + "</br>";
 	}
 	console.log("... printed");
 }
-
-// Stringify Object
-/*pathways.string=function(){
-	pathwaysString = JSON.stringify(data.nameToID);
-	alert(pathwaysString);
-}*/
 
 // Print JSON Object as Table
 /*pathways.printTable=function(){		
@@ -197,6 +186,3 @@ pathways.printResults=function(molecules, gene){
 	});
 	$('</table>').appendTo($(document.body));
 }*/
-
-// Initiate
-pathways.readData();
